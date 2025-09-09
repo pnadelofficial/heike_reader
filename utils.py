@@ -373,3 +373,42 @@ def display_sentence(sentence, translation, glosses_df):
     st.markdown(html_content, unsafe_allow_html=True)
 
     st.write(f"**Translation:** {heike_sentence.translation}")
+
+class Searcher:
+    def __init__(self, translated_df, glosses_df):
+        self.translated_df = translated_df
+        self.chapters = self.translated_df.groupby('chapter_id')['original'].apply(lambda texts: '。'.join(texts)).to_dict()
+        self.glosses_df = glosses_df
+        self.tokenizer = get_tokenizer()
+    
+    def get_context(self, chapter_text, token):
+        sentences = chapter_text.split('。')
+        context_sentences = []
+        for sentence in sentences:
+            if token in sentence:
+                context_sentences.append(sentence)
+        return '。'.join(context_sentences) + '。' if context_sentences else ''
+    
+    def search(self, token):
+        glosses = self.glosses_df[self.glosses_df['token'] == token]
+        if glosses.empty:
+            st.write(f"No gloss found for token: {token}")
+            return
+        valid_chapter_ids = glosses['chapter_id'].unique()
+        self.len_results = len(glosses)
+        st.write(f"Found {self.len_results} sentences containing '{token}' in chapters: {valid_chapter_ids}")
+        for chapter_id in valid_chapter_ids:
+            chapter_text = self.chapters.get(chapter_id, "")
+            context = self.get_context(chapter_text, token)
+            gloss_for_chapter = glosses[glosses['chapter_id'] == chapter_id]
+            if context:
+                st.markdown(f"### Chapter {chapter_id}")
+                st.write(context)
+                st.write(f"- {gloss_for_chapter['gloss'].values[0]} (Lemma: {gloss_for_chapter['lemma'].values[0]}, POS: {gloss_for_chapter['token_part_of_speech'].values[0]})")
+                st.markdown("---")
+        # Optional: Display gloss details
+
+        # st.write(f"Glosses for '{token}':")
+        # for _, row in glosses.iterrows():
+        #     st.write(f"- {row['gloss']} (Lemma: {row['lemma']}, POS: {row['token_part_of_speech']})")    
+            
