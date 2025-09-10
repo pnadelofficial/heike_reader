@@ -390,7 +390,7 @@ class Searcher:
         return '。'.join(context_sentences) + '。' if context_sentences else ''
     
     def search(self, token):
-        glosses = self.glosses_df[self.glosses_df['token'] == token]
+        glosses = self.glosses_df[(self.glosses_df['token'] == token) | (self.glosses_df['token_transliteration'] == token)]
         if glosses.empty:
             st.write(f"No gloss found for token: {token}")
             return
@@ -399,16 +399,12 @@ class Searcher:
         st.write(f"Found {self.len_results} sentences containing '{token}' in chapters: {valid_chapter_ids}")
         for chapter_id in valid_chapter_ids:
             chapter_text = self.chapters.get(chapter_id, "")
-            context = self.get_context(chapter_text, token)
+            true_token = glosses[glosses['chapter_id'] == chapter_id]['token'].values[0]
+            context = self.get_context(chapter_text, true_token)
             gloss_for_chapter = glosses[glosses['chapter_id'] == chapter_id]
             if context:
                 st.markdown(f"### Chapter {chapter_id}")
                 st.write(context)
                 st.write(f"- {gloss_for_chapter['gloss'].values[0]} (Lemma: {gloss_for_chapter['lemma'].values[0]}, POS: {gloss_for_chapter['token_part_of_speech'].values[0]})")
                 st.markdown("---")
-        # Optional: Display gloss details
-
-        # st.write(f"Glosses for '{token}':")
-        # for _, row in glosses.iterrows():
-        #     st.write(f"- {row['gloss']} (Lemma: {row['lemma']}, POS: {row['token_part_of_speech']})")    
             
