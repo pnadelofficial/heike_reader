@@ -261,7 +261,7 @@ def get_tokenizer():
 @st.cache_data
 def load_data():
     glosses = pd.read_csv("data/heike_token_level_glosses.csv")
-    translated = pd.read_csv("data/translated_heike527_qwen14b.csv")
+    translated = pd.read_csv("data/heike_sentence_level_translations_updated912.csv").dropna().reset_index(drop=True)
     return glosses, translated
 
 @dataclass
