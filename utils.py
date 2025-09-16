@@ -7,6 +7,7 @@ import re
 from collections import defaultdict
 import pickle
 import json
+from konoha import SentenceTokenizer
 
 class ClassicalJapaneseTokenizer:
     def __init__(self):
@@ -258,11 +259,17 @@ def get_tokenizer():
     tokenizer.load_model("heike_tokenizer")
     return tokenizer
 
+@st.cache_resource
+def get_sentence_tokenizer():
+    sent_tokenizer = SentenceTokenizer()
+    return sent_tokenizer
+
 @st.cache_data
 def load_data():
     glosses = pd.read_csv("data/heike_token_level_glosses.csv")
     translated = pd.read_csv("data/heike_sentence_level_translations_updated912.csv").dropna().reset_index(drop=True)
     return glosses, translated
+
 
 @dataclass
 class HeikeToken:
@@ -359,7 +366,7 @@ tt_css = """
 </style>
 """
 
-def display_sentence(sentence, translation, glosses_df):
+def display_sentence(sentence, translation, glosses_df, searched_token=None):
     heike_sentence = HeikeSentence(sentence, translation)
     heike_sentence.tokenize()
     heike_sentence.annotate_tokens(glosses_df)
@@ -367,6 +374,9 @@ def display_sentence(sentence, translation, glosses_df):
     html_content = tt_css + '<div class="token-container"><strong>Original:</strong><br>'
     for token, annotation in heike_sentence.annotations:
         tooltip_text = f"{token}\nTransliteration: {annotation.transliteration}\nLemma: {annotation.lemma} ({annotation.lemma_transliteration})\nPart of Speech: {annotation.part_of_speech}\nGloss: {annotation.gloss}"
+        if token == searched_token:
+            html_content += f'<span class="tooltip" style="background-color: yellow;" data-tooltip="{tooltip_text}">{token}</span>'
+            continue
         html_content += f'<span class="tooltip" data-tooltip="{tooltip_text}">{token}</span>'
     
     html_content += '</div>'
@@ -377,17 +387,10 @@ def display_sentence(sentence, translation, glosses_df):
 class Searcher:
     def __init__(self, translated_df, glosses_df):
         self.translated_df = translated_df
-        self.chapters = self.translated_df.groupby('chapter_id')['original'].apply(lambda texts: '。'.join(texts)).to_dict()
+        self.chapters = self.translated_df.groupby('chapter_id')['original'].apply(lambda texts: ''.join(texts)).to_dict()
         self.glosses_df = glosses_df
         self.tokenizer = get_tokenizer()
-    
-    def get_context(self, chapter_text, token):
-        sentences = chapter_text.split('。')
-        context_sentences = []
-        for sentence in sentences:
-            if token in sentence:
-                context_sentences.append(sentence)
-        return '。'.join(context_sentences) + '。' if context_sentences else ''
+        self.sent_tokenizer = get_sentence_tokenizer()
     
     def search(self, token):
         glosses = self.glosses_df[(self.glosses_df['token'] == token) | (self.glosses_df['token_transliteration'] == token)]
@@ -398,13 +401,16 @@ class Searcher:
         self.len_results = len(glosses)
         st.write(f"Found {self.len_results} sentences containing '{token}' in chapters: {valid_chapter_ids}")
         for chapter_id in valid_chapter_ids:
-            chapter_text = self.chapters.get(chapter_id, "")
-            true_token = glosses[glosses['chapter_id'] == chapter_id]['token'].values[0]
-            context = self.get_context(chapter_text, true_token)
-            gloss_for_chapter = glosses[glosses['chapter_id'] == chapter_id]
-            if context:
-                st.markdown(f"### Chapter {chapter_id}")
-                st.write(context)
-                st.write(f"- {gloss_for_chapter['gloss'].values[0]} (Lemma: {gloss_for_chapter['lemma'].values[0]}, POS: {gloss_for_chapter['token_part_of_speech'].values[0]})")
-                st.markdown("---")
-            
+            try:
+                chapter_text = self.chapters[chapter_id] # missing chapter 88, need to redo translation from this point
+            except Exception as e:
+                continue
+            sentences = self.sent_tokenizer.tokenize(chapter_text)
+            for sentence in sentences:
+                if token in sentence:
+                    translated = self.translated_df[(self.translated_df['original'].apply(lambda x: True if x in sentence else False)) & (self.translated_df['chapter_id'] == chapter_id)]
+                    for i, row in translated.iterrows():
+                        if token in row['original']:
+                            st.write(f"#### Chapter {chapter_id + 1}")
+                            display_sentence(row['original'], row['translation'], self.glosses_df, searched_token=token)
+                    
