@@ -3,6 +3,9 @@ from utils import load_data, display_sentence, Searcher
 
 st.title("Heike Reader")
 
+if 'show_info' not in st.session_state:
+    st.session_state.show_info = False
+
 glosses, translated = load_data()
 
 chapter_select = st.sidebar.selectbox(
@@ -14,11 +17,11 @@ chapter_select = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 
-search_bar = st.sidebar.text_input("Search for a word to see its occurrences")
+search_bar = st.sidebar.text_input("Search for a word to see its occurrences", key="search_input")
 
 if search_bar:
     searcher = Searcher(translated, glosses)
-    results = searcher.search(search_bar)
+    results = searcher.search(search_bar.strip())
 
 else:
     translated_subset = translated[translated['chapter_id'] == chapter_select].reset_index(drop=True)
@@ -28,5 +31,4 @@ else:
         sentence = row.original
         translation = row.translation
         st.markdown(f"##### Sentence {i+1}")
-        display_sentence(sentence, translation, glosses)
-        st.markdown("---")
+        display_sentence(sentence, translation, glosses, sent_id=i)
