@@ -526,7 +526,7 @@ class Searcher:
                             ]
                             
                             if relevant_matches:
-                                st.write(f"#### Chapter {chapter_id + 1}")
+                                st.write(f"#### Chapter {chapter_id}")
                                 
                                 # Show what type of matches were found in this sentence
                                 match_info = []
