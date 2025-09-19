@@ -297,36 +297,6 @@ def display_sentence(sentence, translation, glosses_df, sent_id, searched_token=
     # Add separator after the component
     st.markdown("---")
 
-# class Searcher:
-#     def __init__(self, translated_df, glosses_df):
-#         self.translated_df = translated_df
-#         self.chapters = self.translated_df.groupby('chapter_id')['original'].apply(lambda texts: ''.join(texts)).to_dict()
-#         self.glosses_df = glosses_df
-#         self.tokenizer = get_tokenizer()
-#         self.sent_tokenizer = get_sentence_tokenizer()
-    
-#     def search(self, token):
-#         glosses = self.glosses_df[(self.glosses_df['token'] == token) | (self.glosses_df['token_transliteration'] == token)]
-#         if glosses.empty:
-#             st.write(f"No gloss found for token: {token}")
-#             return
-#         valid_chapter_ids = glosses['chapter_id'].unique()
-#         self.len_results = len(glosses)
-#         st.write(f"Found {self.len_results} sentences containing '{token}' in chapters: {valid_chapter_ids}")
-#         for chapter_id in valid_chapter_ids:
-#             try:
-#                 chapter_text = self.chapters[chapter_id] # missing chapter 88, need to redo translation from this point
-#             except Exception as e:
-#                 print(f"Error retrieving chapter {chapter_id}: {e}")
-#                 continue
-#             sentences = self.sent_tokenizer.tokenize(chapter_text)
-#             for i, sentence in enumerate(sentences):
-#                 if token in sentence:
-#                     translated = self.translated_df[(self.translated_df['original'].apply(lambda x: True if x in sentence else False)) & (self.translated_df['chapter_id'] == chapter_id)]
-#                     st.write(f"#### Chapter {chapter_id}")
-#                     for _, row in translated.iterrows():
-#                         if token in row['original']:
-#                             display_sentence(row['original'], row['translation'], self.glosses_df, sent_id=i, searched_token=token)
 class Searcher:
     def __init__(self, translated_df, glosses_df):
         self.translated_df = translated_df
@@ -501,7 +471,6 @@ class Searcher:
             
             # Find sentences containing these tokens
             sentences = self.sent_tokenizer.tokenize(chapter_text)
-            found_sentences = []
             
             for i, sentence in enumerate(sentences):
                 # Check if any of our target tokens appear in this sentence
