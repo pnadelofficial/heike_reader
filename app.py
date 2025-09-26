@@ -1,5 +1,6 @@
 import streamlit as st
-from utils import load_data, display_sentence, Searcher
+from utils import load_data, display_sentence
+from searcher import Searcher
 
 st.title("Heike Reader")
 
